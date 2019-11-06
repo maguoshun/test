@@ -144,16 +144,20 @@ inline uint64_t DecodeFixed64(const char* ptr) {
 
 const char* GetVarint32PtrFallback(const char* p, const char* limit,
                                    uint32_t* value);
+
+// p是str，limit 是str + size, value 是 uint32_t
 inline const char* GetVarint32Ptr(const char* p, const char* limit,
                                   uint32_t* value) {
-  if (p < limit) {
-    uint32_t result = *(reinterpret_cast<const uint8_t*>(p));
-    if ((result & 128) == 0) {
-      *value = result;
-      return p + 1;
+    if (p < limit) {
+        // result 为 p 的第一个字符
+        uint32_t result = *(reinterpret_cast<const uint8_t*>(p));
+        if ((result & 128) == 0) {
+        // 说明 p 的第一个字符的各个位全是0，即 p 是从第二个字符开始的，所以return p + 1
+            *value = result;
+            return p + 1;
+        }
     }
-  }
-  return GetVarint32PtrFallback(p, limit, value);
+    return GetVarint32PtrFallback(p, limit, value);
 }
 
 } // namespcae leveldb
