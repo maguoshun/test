@@ -681,6 +681,8 @@ void DBImpl::BGWork(void* db) {
 void DBImpl::BackgroundCall() {
     MutexLock l(&mutex_);
     assert(background_compaction_scheduled_);
+    // shutting_down_ 是atomic变量，load为读该变量的值，memory_order_acquire作用是确保执行顺序，不会乱序执行
+    // shutting_down_ 只会在析构函数中被设置
     if (shutting_down_.load(std::memory_order_acquire)) {
         // No more background work when shutting down.
     } else if (!bg_error_.ok()) {
@@ -701,6 +703,7 @@ void DBImpl::BackgroundCompaction() {
     mutex_.AssertHeld();
 
     if (imm_ != nullptr) {
+        // 把imm写入level0
         CompactMemTable();
         return;
     }
@@ -709,6 +712,7 @@ void DBImpl::BackgroundCompaction() {
     bool is_manual = (manual_compaction_ != nullptr);
     InternalKey manual_end;
     if (is_manual) {
+        // is_manual 一般是测试时设置，正常不会走到这里
         ManualCompaction* m = manual_compaction_;
         c = versions_->CompactRange(m->level, m->begin, m->end);
         m->done = (c == nullptr);
@@ -721,6 +725,7 @@ void DBImpl::BackgroundCompaction() {
             (m->end ? m->end->DebugString().c_str() : "(end)"),
             (m->done ? "(end)" : manual_end.DebugString().c_str()));
     } else {
+        // 找出最合适做compaction的level
         c = versions_->PickCompaction();
     }
 
